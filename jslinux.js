@@ -514,7 +514,7 @@ function start_vm(user, pwd)
 
         net_state = null;
         if (net_url != "") {
-            net_state = new Ethernet(net_url);
+            net_state = new WsTunnel(net_url);
         }
 
         Module.ccall("vm_start", null, ["string", "number", "string", "string", "number", "number", "number", "string"], [url, mem_size, cmdline, pwd, width, height, (net_state != null) | 0, drive_url]);
