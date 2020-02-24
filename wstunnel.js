@@ -14,6 +14,9 @@ function WsTunnel(url)
     this.socket.onerror = this.errorHandler.bind(this);
     this.self_mac = null;
     this.remote_mac = new Uint8Array([0, 0, 0, 0, 0, 0]);
+    this.netconf = null;
+    this.onnetconf = null;
+    this.netconf_received = false;
 }
 
 WsTunnel.prototype.openHandler = function(e)
@@ -38,13 +41,12 @@ WsTunnel.prototype.messageHandler = function(e)
         this._do_send_packet(new Uint8Array(e.data));
     } else {
         str = e.data.toString();
-        if (str.substring(0, 5) == "ping:") {
-            try {
-                this.socket.send('pong:' + str.substring(5));
-            } catch (err) {
+        if(!this.netconf_received) {
+            this.netconf_received = true;
+            this.netconf = JSON.parse(str);
+            if(this.onnetconf) {
+                this.onnetconf(this.netconf);
             }
-        } else {
-            console.log(str)
         }
     }
 }
