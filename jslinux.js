@@ -68,7 +68,7 @@ function term_handler(str)
 function downloading_timer_cb()
 {
     var el = document.getElementById("net_progress");
-    el.style.visibility = "hidden";
+    if(el) el.style.visibility = "hidden";
     downloading_timer_pending = false;
 }
 
@@ -81,7 +81,7 @@ function update_downloading(flag)
             downloading_timer_pending = false;
         } else {
             el = document.getElementById("net_progress");
-            el.style.visibility = "visible";
+            if(el) el.style.visibility = "visible";
         }
     } else {
         downloading_timer_pending = true;
@@ -501,7 +501,7 @@ function start_vm(user, pwd)
         head.appendChild(script);
     }
 
-    function start()
+    async function start()
     {
         /* C functions called from javascript */
         console_write1 = Module.cwrap('console_queue_char', null, ['number']);
@@ -515,6 +515,20 @@ function start_vm(user, pwd)
         net_state = null;
         if (net_url != "") {
             net_state = new WsTunnel(net_url);
+            let netconf = await new Promise(resolve => {
+                net_state.onnetconf = resolve;
+            });
+            console.log(netconf);
+            if(netconf.ipv4) {
+                cmdline += " IPV4_ADDRESS=" + netconf.ipv4.address;
+                cmdline += " IPV4_GATEWAY=" + netconf.ipv4.gateway;
+                cmdline += " IPV4_PREFIX_LEN=" + netconf.ipv4.prefix_length;
+            }
+            if(netconf.ipv6) {
+                cmdline += " IPV6_ADDRESS=" + netconf.ipv6.address;
+                cmdline += " IPV6_GATEWAY=" + netconf.ipv6.gateway;
+                cmdline += " IPV6_PREFIX_LEN=" + netconf.ipv6.prefix_length;
+            }
         }
 
         Module.ccall("vm_start", null, ["string", "number", "string", "string", "number", "number", "number", "string"], [url, mem_size, cmdline, pwd, width, height, (net_state != null) | 0, drive_url]);
@@ -559,10 +573,14 @@ function start_vm(user, pwd)
         width = 0;
         height = 0;
         /* start the terminal */
-        term = new Term(cols, rows, term_handler, 10000);
-        term.open(document.getElementById("term_container"),
-                  document.getElementById("term_paste"));
-        term.term_el.style.fontSize = font_size + "px";
+        term = new Terminal();
+        term.getSize = () => {
+            return [term.cols, term.rows];
+        };
+        term.onData(term_handler);
+
+        term.open(document.getElementById("term_container"));
+        term.fit();
         term.write("Loading...\r\n");
     }
 
@@ -609,7 +627,6 @@ function start_vm(user, pwd)
 function on_login()
 {
     var login_wrap_el = document.getElementById("wrap");
-    var term_wrap_el = document.getElementById("term_wrap");
     var form = document.getElementById("form");
     var status = document.getElementById("status");
     var user = form.user.value;
@@ -621,7 +638,6 @@ function on_login()
     }
     
     login_wrap_el.style.display = "none";
-    term_wrap_el.style.display = "block";
     form.password.value = "";
     form.user.value = "";
     
@@ -639,8 +655,6 @@ function on_login()
         var login_wrap_el = document.getElementById("wrap");
         login_wrap_el.style.display = "block";
     } else {
-        var term_wrap_el = document.getElementById("term_wrap");
-        term_wrap_el.style.display = "block";
         start_vm(null, null);
     }
 })();
