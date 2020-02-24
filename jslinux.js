@@ -538,11 +538,11 @@ function start_vm(user, pwd)
     /* read the parameters */
 
     params = get_params();
-    cpu = params["cpu"] || "riscv64";
+    cpu = params["cpu"] || "x86";
     url = params["url"];
     if (!url) {
         if (cpu == "x86")
-            url = "root-x86.cfg";
+            url = "alpine-build-x86.cfg";
         else
             url = "root-riscv64.cfg";
     }
